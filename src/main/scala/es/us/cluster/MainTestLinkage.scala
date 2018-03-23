@@ -5,6 +5,7 @@ import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.monotonically_increasing_id
+import org.apache.spark.sql.types.{DoubleType, FloatType, IntegerType}
 
 /**
   * Main object for testing clustering methods using Linkage in SPARK MLLIB
@@ -22,23 +23,27 @@ object MainTestLinkage {
 
     val spark = SparkSession.builder()
       .appName("Spark Cluster")
+//      .config("spark.mesos.constraints", "enable_gpu:0")
       .master("local[*]")
       .getOrCreate()
 
     import spark.implicits._
 
     var path = ""
-    var fileName = ""
-//    var fileName = "C5-D20-I1000.csv"
+//    var fileName = ""
+//    var fileName = "B:\\Datasets\\DataSet-10000P"
+    var fileName = "B:\\Datasets\\C7-D20-I1000"
 //    var fileName = "DataBase500pC7"
 //    var fileName = "B:\\Datasets\\irisData.txt"
+//    var fileName = "B:\\Datasets\\poker-hand-testing.data.txt"
+    var fileDestination = "hdfs://10.141.0.224:9000/jdmartin/modelSaves"
 
     var origen: String = path + fileName
-    var destino: String = path
+    var destino: String = path + fileDestination
 
     /* Set up the number of points to the data, the minimum number of points per centroid
     and the strategy distance to run linkage algorithm */
-    var numPoints = 5000
+    var numPoints = 7000
     var clusterFilterNumber = 1
     var strategyDistance = "avg"
 
@@ -75,6 +80,20 @@ object MainTestLinkage {
       .option("inferSchema", "true")
       .option("delimiter", ",")
       .csv(origen)
+
+    //Casting
+//    val dataDFAux = dataDF.select(
+//      dataDF("_c0").cast(DoubleType),
+//      dataDF("_c1").cast(DoubleType),
+//      dataDF("_c2").cast(DoubleType),
+//      dataDF("_c3").cast(DoubleType),
+//      dataDF("_c4").cast(DoubleType),
+//      dataDF("_c5").cast(DoubleType),
+//      dataDF("_c6").cast(DoubleType),
+//      dataDF("_c7").cast(DoubleType),
+//      dataDF("_c8").cast(DoubleType),
+//      dataDF("_c9").cast(DoubleType)
+//    )
 
     //Filtering DataFrame
     val dataDFFiltered = typDataSet match {

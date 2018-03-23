@@ -1,6 +1,6 @@
 package es.us.cluster
 
-import es.us.linkage.{Distance, Linkage}
+import es.us.linkage.{Distance, Linkage, LinkageModel}
 import org.apache.spark.internal.Logging
 import org.apache.spark.mllib.clustering.{BisectingKMeans, KMeans}
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
@@ -247,7 +247,7 @@ object ClusterIndex extends Logging {
     var modelResult = scala.collection.mutable.Map[Int, (Double, Double, Double, Double, Long, Long, Long, Long)]()
 
     //Set up the checkpoint directory
-    sc.setCheckpointDir("checkpoints")
+    sc.setCheckpointDir("hdfs://10.141.0.224:9000/jdmartin/checkpointsSpark")
 
     //Initialize the number of clusters with the minimum number of clusters
     var numberClusters = minClusters
@@ -261,6 +261,16 @@ object ClusterIndex extends Logging {
     //Run the Linkage algorithm and create the clusters variable
     var clusters = linkage.runAlgorithm(distances, numPoints)
 
+//    val clustering = sc.textFile("C:\\Users\\Jose David\\IdeaProjects\\ClusterIndices\\Test-10000pLinkage-201803220226\\part-00000")
+//      .map(s => s.split(',').map(_.toInt))
+//      .map{
+//    case x => (x(0).toLong, (x(1), x(2)))
+//  }
+//    var clusters = new LinkageModel(clustering,sc.emptyRDD[Vector].collect())
+//    var clusters = linkage.runAlgorithmWithCentroids(distances, numPoints, coordinates)
+    //Save the result model for the linkage algorithm
+    clusters.saveSchema("hdfs://10.141.0.224:9000/jdmartin/modelSaves")
+
     //Initialize an RDD from 1 to the number of points in our database
     val totalPoints = sc.parallelize(1 to numPoints).cache()
 
@@ -273,8 +283,9 @@ object ClusterIndex extends Logging {
 
       //In function of the number of clusters the centroids will chance
       val resultPoints = clusters.createClusters(numPoints, numClusters, totalPoints)
-      val centroids = clusters.inicializeCenters(coordinates, numClusters, numPoints, clusterFilterNumber, resultPoints)
+      val centroids = clusters.inicializeCenters(coordinates, clusterFilterNumber, resultPoints)
       clusters.setClusterCenters(centroids)
+
 
       //Global Center
       val centroides = sc.parallelize(clusters.clusterCenters)

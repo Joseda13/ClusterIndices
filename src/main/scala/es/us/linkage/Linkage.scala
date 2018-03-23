@@ -2,7 +2,8 @@ package es.us.linkage
 
 import es.us.cluster.Utils
 import org.apache.spark.internal.Logging
-import org.apache.spark.mllib.linalg.Vector
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+import org.apache.spark.mllib.stat.{MultivariateStatisticalSummary, Statistics}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.min
@@ -61,6 +62,7 @@ class Linkage(
     val linkageModel = scala.collection.mutable.Map[Long, (Int, Int)]()
 
     for (a <- 0 until (numPoints - numClusters)) {
+      val startIter = System.nanoTime
 
       val clustersRes = matrix.min()(DistOrdering)
 
@@ -133,6 +135,9 @@ class Linkage(
         matrix.checkpoint()
       }
 
+      val durationIter = (System.nanoTime - startIter) / 1e9d
+      println(s"TIME: $durationIter")
+
     }
 
     matrix.unpersist()
@@ -143,6 +148,131 @@ class Linkage(
 
     //Return a new LinkageModel based into the model
     (new LinkageModel(sc.parallelize(linkageModel.toSeq), sc.emptyRDD[Vector].collect()))
+
+  }
+
+  def runAlgorithmWithCentroids(distanceMatrix: RDD[Distance], numPoints: Int, coordinates: RDD[(Int, Vector)]): LinkageModel = {
+
+    val start = System.nanoTime
+
+    //Save in a variable the matrix of distances, the number of partitions and the sparkContext for future uses
+    var matrix = distanceMatrix
+    val partitionNumber = distanceMatrix.getNumPartitions
+    val sc = distanceMatrix.sparkContext
+
+    //Initialize the counter taking into account the maximum value of existing points
+    val cont = sc.longAccumulator("My Accumulator")
+    cont.add(numPoints)
+
+    //Create a Map to save the cluster and points obtained in each iteration
+    val linkageModel = scala.collection.mutable.Map[Long, (Int, Int)]()
+
+    var centroids = Array[Vector]()
+    var coordinatesAux = coordinates
+
+    for (a <- 0 until (numPoints - numClusters)) {
+      val startIter = System.nanoTime
+
+      val clustersRes = matrix.min()(DistOrdering)
+
+      //Save in variables the cluster and points we find in this iteration and we add them to the model
+      val point1 = clustersRes.getIdW1
+      val point2 = clustersRes.getIdW2
+      cont.add(1)
+      val newIndex = cont.value.toLong
+
+      //The new cluster is saved in the result model
+      linkageModel += newIndex -> (point1, point2)
+
+      var auxVectors = scala.collection.mutable.Map[Int, Vector]()
+
+      val points = coordinatesAux.filter(row => row._1 == point1 || row._1 == point2).collect()
+
+      //Save the mean coordinates to the all points for each centroid
+      val summary: MultivariateStatisticalSummary = Statistics.colStats(sc.parallelize(points).map(value => value._2))
+      centroids = centroids :+ summary.mean
+
+      auxVectors += newIndex.toInt -> summary.mean
+
+      coordinatesAux = coordinatesAux.subtract(sc.parallelize(points)).union(sc.parallelize(auxVectors.toSeq))
+      coordinatesAux.collect().foreach(println(_))
+      //If it isn´t the last cluster
+      if (a < (numPoints - numClusters - 1)) {
+
+        //The point found is deleted
+        matrix = matrix.filter(x => !(x.getIdW1 == point1 && x.getIdW2 == point2))
+
+        //Search all the distances that contain the first coordinate of the new cluster
+        val rddPoints1 = matrix.filter(x => x.getIdW1 == point1 || x.getIdW2 == point1).collect()
+
+        //Search all the distances that contain the second coordinate of the new cluster
+        val rddPoints2 = matrix.filter(x => x.getIdW1 == point2 || x.getIdW2 == point2).collect()
+
+        //Eliminate the whole points
+        val matrixSub = matrix.filter(x => !(x.getIdW1 == point1 || x.getIdW2 == point1))
+          .filter(x => !(x.getIdW1 == point2 || x.getIdW2 == point2))
+
+        //A new RDD is generated with the points filtered by the remaining points in order to calculate the distance to each one in the next step
+        val rddCartesianPoints = sc.parallelize(rddPoints1).cartesian(sc.parallelize(rddPoints2))
+        val rddFilteredPoints = rddCartesianPoints.filter(x => (x._1.getIdW2 == x._2.getIdW2) ||
+          (x._1.getIdW1 == x._2.getIdW1) ||
+          (x._1.getIdW1 == x._2.getIdW2 ||
+            (x._2.getIdW1 == x._1.getIdW2)))
+
+        //A new point is created following the strategy
+        matrix = distanceStrategy match {
+
+          case "min" =>
+            //The new distance is calculated with respect to all points and the chosen strategy
+            val newPoints = rddFilteredPoints.map(x => new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes),
+              math.min(x._1.getDist, x._2.getDist)))
+
+            //Add the points with the new index
+            matrixSub.union(newPoints)
+
+          case "max" =>
+            //The new distance is calculated with respect to all points and the chosen strategy
+            val newPoints = rddFilteredPoints.map(x => new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes),
+              math.max(x._1.getDist, x._2.getDist)))
+
+            //Add the points with the new index
+            matrixSub.union(newPoints)
+
+          case "avg" =>
+            //The new distance is calculated with respect to all points and the chosen strategy
+            val newPoints = rddFilteredPoints.map(x => new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes),
+              ((x._1.getDist + x._2.getDist) / 2)))
+
+            //Add the points with the new index
+            matrixSub.union(newPoints)
+        }
+      }
+
+      //The distance matrix is ​​persisted to improve the performance of the algorithm
+      matrix = matrix.coalesce(partitionNumber / 2).persist(StorageLevel.MEMORY_ONLY_2)
+
+      coordinatesAux = coordinatesAux.coalesce(partitionNumber / 2).persist(StorageLevel.MEMORY_ONLY_2)
+
+      //Every 5 iterations a checkpoint of the distance matrix is ​​done to improve the performance of the algorithm
+      if (a % 5 == 0) {
+        matrix.checkpoint()
+        coordinatesAux.checkpoint()
+//        coordinatesAux.count()
+      }
+
+      val durationIter = (System.nanoTime - startIter) / 1e9d
+      println(s"TIME: $durationIter")
+
+    }
+
+    matrix.unpersist()
+
+    //Show the duration to run the algorithm
+    val duration = (System.nanoTime - start) / 1e9d
+    logInfo("Time for linkage clustering: " + duration)
+
+    //Return a new LinkageModel based into the model
+    (new LinkageModel(sc.parallelize(linkageModel.toSeq), centroids))
 
   }
 
