@@ -272,11 +272,11 @@ class LinkageModel(_clusters: RDD[(Long, (Int, Int))], var _clusterCenters: Arra
   }
 
   /**
-    * Calculate
+    * Calculate the mean of Iterable[Vector]
     *
     * @param vectors  RDD with the values of each point and its id. The format is (Int, Vector)
-    * @return A Array with the centroids at the model
-    * @example inicializeCenters(coordinates, 3, 150, 1, resultPoints)
+    * @return A Vector that represents the centroid from one cluster
+    * @example calculateMean(vectors)
     */
   def calculateMean(vectors: Iterable[Vector]): Vector = {
 
@@ -308,6 +308,7 @@ class LinkageModel(_clusters: RDD[(Long, (Int, Int))], var _clusterCenters: Arra
   def inicializeCenters(coordinates: RDD[(Int, Vector)], kMin: Int, resultPoints: RDD[(Int, Int)]): Array[Vector] = {
     val start = System.nanoTime
 
+    //Join the coordinates RDD with the result of the model and calculate the centroid from each cluster
     val joinRDDs = coordinates.join(resultPoints).map(value => (value._2._2,value._2._1)).groupByKey()
     val rest  = joinRDDs.mapValues(calculateMean(_)).map(_._2).collect()
 
