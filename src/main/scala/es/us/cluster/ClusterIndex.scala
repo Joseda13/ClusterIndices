@@ -247,7 +247,8 @@ object ClusterIndex extends Logging {
     var modelResult = scala.collection.mutable.Map[Int, (Double, Double, Double, Double, Long, Long, Long, Long)]()
 
     //Set up the checkpoint directory
-    sc.setCheckpointDir("hdfs://10.141.0.224:9000/jdmartin/checkpointsSpark")
+//    sc.setCheckpointDir("hdfs://10.141.0.224:9000/jdmartin/checkpointsSpark")
+    sc.setCheckpointDir("B:\\checkpoints")
 
     //Initialize the number of clusters with the minimum number of clusters
     var numberClusters = minClusters
@@ -269,7 +270,8 @@ object ClusterIndex extends Logging {
 //    var clusters = new LinkageModel(clustering,sc.emptyRDD[Vector].collect())
 //    var clusters = linkage.runAlgorithmWithCentroids(distances, numPoints, coordinates)
     //Save the result model for the linkage algorithm
-    clusters.saveSchema("hdfs://10.141.0.224:9000/jdmartin/modelSaves")
+    clusters.saveSchema("")
+//    clusters.saveSchema("hdfs://10.141.0.224:9000/jdmartin/modelSaves")
 
     //Initialize an RDD from 1 to the number of points in our database
     val totalPoints = sc.parallelize(1 to numPoints).cache()

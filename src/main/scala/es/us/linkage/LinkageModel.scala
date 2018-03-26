@@ -308,8 +308,8 @@ class LinkageModel(_clusters: RDD[(Long, (Int, Int))], var _clusterCenters: Arra
   def inicializeCenters(coordinates: RDD[(Int, Vector)], kMin: Int, resultPoints: RDD[(Int, Int)]): Array[Vector] = {
     val start = System.nanoTime
 
-    //Join the coordinates RDD with the result of the model and calculate the centroid from each cluster
-    val joinRDDs = coordinates.join(resultPoints).map(value => (value._2._2,value._2._1)).groupByKey()
+    //Join the coordinates RDD with the result of the model and calculate the centroid from each cluster if the size of the cluster is more or equal than the minimum number of points chosen
+    val joinRDDs = coordinates.join(resultPoints).map(value => (value._2._2,value._2._1)).groupByKey().filter(_._2.size >= kMin)
     val rest  = joinRDDs.mapValues(calculateMean(_)).map(_._2).collect()
 
     //Show the duration to create the centroids
