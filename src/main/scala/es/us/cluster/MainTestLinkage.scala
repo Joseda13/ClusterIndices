@@ -32,9 +32,14 @@ object MainTestLinkage {
     var path = ""
 //    var fileName = ""
 //    var fileName = "B:\\Datasets\\DataSet-10000P"
-    var fileName = "B:\\Datasets\\C7-D20-I1000"
-//    var fileName = "DataBase500pC7"
+//    var fileName = "B:\\Datasets\\C3-D20-I1000"
+//    var fileName = "B:\\Datasets\\DataBase500pC7"
+//    var fileName = "C5-D20-I1000.csv"
 //    var fileName = "B:\\Datasets\\irisData.txt"
+    var fileName = "B:\\Datasets\\iris_30.txt"
+//    var fileName = "B:\\Datasets\\distanceTest"
+//    var fileName = "B:\\Datasets\\glassData.txt"
+//    var fileName = "B:\\Datasets\\Distances_full_dataset"
 //    var fileName = "B:\\Datasets\\poker-hand-testing.data.txt"
 //    var fileDestination = "hdfs://10.141.0.224:9000/jdmartin/modelSaves"
     var fileDestination = ""
@@ -44,20 +49,21 @@ object MainTestLinkage {
 
     /* Set up the number of points to the data, the minimum number of points per centroid
     and the strategy distance to run linkage algorithm */
-    var numPoints = 7000
+    var numPoints = 30
+//    var clusterFilterNumber = Math.round(0.17*numPoints).toInt
     var clusterFilterNumber = 1
     var strategyDistance = "avg"
 
     /* Set up the type of the data, its id column, its class column ("_cX" format, since 0 until length - 1)
     and the method to calculate the distance between points */
-    var typDataSet = 0
+    var typDataSet = 1
     var idIndex = "_c0"
     var classIndex = "_c4"
     var distanceMethod = "Euclidean"
 
     //Set up the minimum and maximum number of cluster and the number of partitions
     var minNumCluster = 2
-    var maxNumCluster = 10
+    var maxNumCluster = 3
     var numPartitions = 16
 
     if (args.size > 2) {

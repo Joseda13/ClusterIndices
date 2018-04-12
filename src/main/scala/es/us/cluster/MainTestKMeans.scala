@@ -25,7 +25,8 @@ object MainTestKMeans {
     val sc = new SparkContext(conf)
 
     var path = ""
-    var fileName = "C5-D20-I1000.csv"
+//    var fileName = "C5-D20-I1000.csv"
+    var fileName = "B:\\Datasets\\irisData_Not_Class.txt"
 
     var origen: String = path + fileName
     var destino: String = path + fileName

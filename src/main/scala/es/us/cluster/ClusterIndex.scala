@@ -37,7 +37,7 @@ object ClusterIndex extends Logging {
     var s = ""
     val sc = parsedData.sparkContext
 
-    val clusters = KMeans.train(parsedData, numClusters, numIterations, 1, "k-means||", Utils.giveMeTime())
+    val clusters = KMeans.train(parsedData, numClusters, numIterations)
 
     //Global Center
     val centroides = sc.parallelize(clusters.clusterCenters)
@@ -262,7 +262,7 @@ object ClusterIndex extends Logging {
     //Run the Linkage algorithm and create the clusters variable
     var clusters = linkage.runAlgorithm(distances, numPoints)
 
-//    val clustering = sc.textFile("C:\\Users\\Jose David\\IdeaProjects\\ClusterIndices\\Test-10000pLinkage-201803220226\\part-00000")
+//    val clustering = sc.textFile("C:\\Users\\Jose David\\IdeaProjects\\linkage\\Linkage-EMPLEO-FULL(AVG)\\part-00000")
 //      .map(s => s.split(',').map(_.toInt))
 //      .map{
 //    case x => (x(0).toLong, (x(1), x(2)))
@@ -287,7 +287,9 @@ object ClusterIndex extends Logging {
       val resultPoints = clusters.createClusters(numPoints, numClusters, totalPoints)
       val centroids = clusters.inicializeCenters(coordinates, clusterFilterNumber, resultPoints)
       clusters.setClusterCenters(centroids)
-
+//      linkage.runAlgorithmDendrogram(distances,numPoints,1)
+//      clusters.clusterCenters.foreach(println(_))
+//      clusters.saveResult("",resultPoints,150,k)
 
       //Global Center
       val centroides = sc.parallelize(clusters.clusterCenters)
