@@ -70,8 +70,6 @@ class Linkage(
 
       val clustersRes = matrix.min()(DistOrdering)
 
-      println("Cluster: " + clustersRes)
-
       //Save in variables the cluster and points we find in this iteration and we add them to the model
       val point1 = clustersRes.getIdW1
       val point2 = clustersRes.getIdW2
@@ -80,6 +78,9 @@ class Linkage(
 
       //The new cluster is saved in the result model
       linkageModel += newIndex -> (point1, point2)
+
+      val sizePoint1 = totalPoints.filter(x => (x._2 == point1 || x._1 == point1)).count()
+      val sizePoint2 = totalPoints.filter(x => (x._2 == point2 || x._1 == point2)).count()
 
       //Update the RDD that shows in which cluster each point is in each iteration
       totalPoints = totalPoints.map {value =>
@@ -92,9 +93,6 @@ class Linkage(
 
       //If it isn´t the last cluster
       if (a < (numPoints - numClusters - 1)) {
-
-        val sizePoint1 = totalPoints.filter(x => x._2 == point1).count()
-        val sizePoint2 = totalPoints.filter(x => x._2 == point2).count()
 
         //The point found is deleted
         matrix = matrix.filter(x => !(x.getIdW1 == point1 && x.getIdW2 == point2))
@@ -115,7 +113,7 @@ class Linkage(
           (x._1.getIdW1 == x._2.getIdW1) ||
           (x._1.getIdW1 == x._2.getIdW2 ||
             (x._2.getIdW1 == x._1.getIdW2)))
-        rddFilteredPoints.collect().foreach(println(_))
+
         //A new point is created following the strategy
         matrix = distanceStrategy match {
 
@@ -147,7 +145,7 @@ class Linkage(
 //                val sizePoint1 = totalPoints.filter(x => x._2 == point1).count()
 //                val sizePoint2 = totalPoints.filter(x => x._2 == point2).count()
                 val newDistance = (((sizePoint1*x._1.getDist) + (sizePoint2*x._2.getDist))/(sizePoint1+sizePoint2))
-                println(newDistance)
+
                 newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), newDistance)
               }else if (point1 > numPoints && point2 <= numPoints){
 //                val modelAux = new LinkageModel(sc.parallelize(linkageModel.toSeq), sc.emptyRDD[Vector].collect())
