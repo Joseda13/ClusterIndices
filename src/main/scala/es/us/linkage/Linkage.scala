@@ -79,6 +79,7 @@ class Linkage(
       //The new cluster is saved in the result model
       linkageModel += newIndex -> (point1, point2)
 
+      //Calculate the number of points to each point in the new cluster
       val sizePoint1 = totalPoints.filter(x => (x._2 == point1 || x._1 == point1)).count()
       val sizePoint2 = totalPoints.filter(x => (x._2 == point2 || x._1 == point2)).count()
 
@@ -138,27 +139,24 @@ class Linkage(
             val newPoints = rddFilteredPoints.map { x =>
 
               var newPoint = new Distance(0, 0, 0f)
-//              newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), ((x._1.getDist + x._2.getDist) / 2))
+              //If both points aren't clusters, the average will be the sum between their distances divided by 2
               if (point1 <= numPoints && point2 <= numPoints) {
                 newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), ((x._1.getDist + x._2.getDist) / 2))
-              } else if (point1 > numPoints && point2 > numPoints){
-//                val sizePoint1 = totalPoints.filter(x => x._2 == point1).count()
-//                val sizePoint2 = totalPoints.filter(x => x._2 == point2).count()
+              }
+              //If both points are clusters, the average will be the sum between their distances multiplied by their sizes divided by the sum of their sizes
+              else if (point1 > numPoints && point2 > numPoints){
                 val newDistance = (((sizePoint1*x._1.getDist) + (sizePoint2*x._2.getDist))/(sizePoint1+sizePoint2))
-
                 newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), newDistance)
-              }else if (point1 > numPoints && point2 <= numPoints){
-//                val modelAux = new LinkageModel(sc.parallelize(linkageModel.toSeq), sc.emptyRDD[Vector].collect())
-//                val resultPoints = modelAux.createClusters(numPoints,newIndex.toInt-numPoints,totalPoints)
-//                val sizePoint1 = totalPoints.filter(x => x._2 == point1).count()
-
-                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), ((sizePoint1*x._1.getDist) + (x._2.getDist)/(sizePoint1 + 1)))
-              }else if (point2 > numPoints && point1 <= numPoints){
-//                val modelAux = new LinkageModel(sc.parallelize(linkageModel.toSeq), sc.emptyRDD[Vector].collect())
-//                val resultPoints = modelAux.createClusters(numPoints,newIndex.toInt-numPoints,totalPoints)
-//                val sizePoint2 = totalPoints.filter(x => x._2 == point2).count()
-
-                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), (x._1.getDist + (sizePoint2*x._2.getDist)/(1 + sizePoint2)))
+              }
+              //If point1 is a cluster and point2 is not, the average will be the sum between the multiplication of the size of the cluster and the distance of point1 and the distance of point2 divided by the size of the cluster plus 1
+              else if (point1 > numPoints && point2 <= numPoints){
+                val newDistance = (((sizePoint1*x._1.getDist) + x._2.getDist)/(sizePoint1 + 1))
+                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), newDistance)
+              }
+              //If point2 is a cluster and point1 is not, the average will be the sum between the multiplication of the size of the cluster and the distance of point2 and the distance of point1 divided by the size of the cluster plus 1
+              else if (point2 > numPoints && point1 <= numPoints){
+                val newDistance = (((sizePoint2*x._2.getDist) + x._1.getDist)/(sizePoint2 + 1))
+                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), newDistance)
               }
               newPoint
             }
@@ -489,10 +487,9 @@ class Linkage(
       cont.add(1)
       val newIndex = cont.value.toInt
 
-      println("New Cluster: " + newIndex + ":" + point1 + "-" + point2)
-
-      val sizePoint1 = totalPoints.filter(x => x._1 == point1).count()
-      val sizePoint2 = totalPoints.filter(x => x._1 == point2).count()
+      //Calculate the number of points to each point in the new cluster
+      val sizePoint1 = totalPoints.filter(x => (x._2 == point1 || x._1 == point1)).count()
+      val sizePoint2 = totalPoints.filter(x => (x._2 == point2 || x._1 == point2)).count()
 
       //Update the RDD that shows in which cluster each point is in each iteration
       totalPoints = totalPoints.map {value =>
@@ -557,25 +554,24 @@ class Linkage(
             val newPoints = rddFilteredPoints.map { x =>
 
               var newPoint = new Distance(0, 0, 0f)
+              //If both points aren't clusters, the average will be the sum between their distances divided by 2
               if (point1 <= numPoints && point2 <= numPoints) {
                 newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), ((x._1.getDist + x._2.getDist) / 2))
-              } else if (point1 > numPoints && point2 > numPoints){
-                //                val sizePoint1 = totalPoints.filter(x => x._2 == point1).count()
-                //                val sizePoint2 = totalPoints.filter(x => x._2 == point2).count()
-
-                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), ((sizePoint1*x._1.getDist) + (sizePoint2*x._2.getDist)/(sizePoint1*sizePoint2)))
-              }else if (point1 > numPoints && point2 <= numPoints){
-                //                val modelAux = new LinkageModel(sc.parallelize(linkageModel.toSeq), sc.emptyRDD[Vector].collect())
-                //                val resultPoints = modelAux.createClusters(numPoints,newIndex.toInt-numPoints,totalPoints)
-                //                val sizePoint1 = totalPoints.filter(x => x._2 == point1).count()
-
-                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), ((sizePoint1*x._1.getDist) + (x._2.getDist)/(sizePoint1 + 1)))
-              }else if (point2 > numPoints && point1 <= numPoints){
-                //                val modelAux = new LinkageModel(sc.parallelize(linkageModel.toSeq), sc.emptyRDD[Vector].collect())
-                //                val resultPoints = modelAux.createClusters(numPoints,newIndex.toInt-numPoints,totalPoints)
-                //                val sizePoint2 = totalPoints.filter(x => x._2 == point2).count()
-
-                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), (x._1.getDist + (sizePoint2*x._2.getDist)/(1 + sizePoint2)))
+              }
+              //If both points are clusters, the average will be the sum between their distances multiplied by their sizes divided by the sum of their sizes
+              else if (point1 > numPoints && point2 > numPoints){
+                val newDistance = (((sizePoint1*x._1.getDist) + (sizePoint2*x._2.getDist))/(sizePoint1+sizePoint2))
+                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), newDistance)
+              }
+              //If point1 is a cluster and point2 is not, the average will be the sum between the multiplication of the size of the cluster and the distance of point1 and the distance of point2 divided by the size of the cluster plus 1
+              else if (point1 > numPoints && point2 <= numPoints){
+                val newDistance = (((sizePoint1*x._1.getDist) + x._2.getDist)/(sizePoint1 + 1))
+                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), newDistance)
+              }
+              //If point2 is a cluster and point1 is not, the average will be the sum between the multiplication of the size of the cluster and the distance of point2 and the distance of point1 divided by the size of the cluster plus 1
+              else if (point2 > numPoints && point1 <= numPoints){
+                val newDistance = (((sizePoint2*x._2.getDist) + x._1.getDist)/(sizePoint2 + 1))
+                newPoint = new Distance(newIndex.toInt, filterMatrix(x._1, clustersRes), newDistance)
               }
               newPoint
             }
@@ -594,6 +590,7 @@ class Linkage(
         matrix.checkpoint()
       }
 
+      //Every 200 iterations a checkpoint of the model and the totalPoints matrix is ​​done to improve the performance of the algorithm
       if (a % 200 == 0) {
         model.checkpoint()
         totalPoints.checkpoint()

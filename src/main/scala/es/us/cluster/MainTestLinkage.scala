@@ -41,7 +41,6 @@ object MainTestLinkage {
 //    var fileName = "B:\\Datasets\\glassData.txt"
 //    var fileName = "B:\\Datasets\\Distances_full_dataset"
 //    var fileName = "B:\\Datasets\\poker-hand-testing.data.txt"
-//    var fileDestination = "hdfs://10.141.0.224:9000/jdmartin/modelSaves"
     var fileDestination = ""
 
     var origen: String = path + fileName
