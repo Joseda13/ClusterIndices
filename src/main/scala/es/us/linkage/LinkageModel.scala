@@ -299,18 +299,68 @@ class LinkageModel(_clusters: RDD[(Long, (Int, Int))], var _clusterCenters: Arra
   /**
     * Create a Array with the centroids of the model in Vector format
     *
-    * @param coordinates  RDD with the values of each point and its id. The format is (Int, Vector)
-    * @param kMin         Filter to the minimum number of points to each centroid
-    * @param resultPoints RDD with all points and its cluster number
+    * @param coordinates       RDD with the values of each point and its id. The format is (Int, Vector)
+    * @param kMin              Filter to the minimum number of points to each centroid
+    * @param numPoints         The number of points on the dataset
+    * @param numClusters       The number of the clusters
+    * @param totalPoints       A RDD with all points on the dataset
+    * @param numStaticClusters The number of clusters for each CVI iteration
     * @return A Array with the centroids at the model
-    * @example inicializeCenters(coordinates, 3, 150, 1, resultPoints)
+    * @example inicializeCenters(coordinates, 3, 150, 2, totalPoints, 2)
     */
-  def inicializeCenters(coordinates: RDD[(Int, Vector)], kMin: Int, resultPoints: RDD[(Int, Int)]): Array[Vector] = {
+  def inicializeCenters(coordinates: RDD[(Int, Vector)], kMin: Int, numPoints: Int, numClusters: Int, totalPoints: RDD[Int], numStaticClusters: Int): Array[Vector] = {
+
     val start = System.nanoTime
 
+    //We filter the total of clusters establishing a lower and upper limit depending on the number of points and the level at which we want to stop
+    val minCluster = numPoints + 1
+    val topCluster = numPoints + numPoints
+
+    val clustersFiltered = clusters.filterByRange(minCluster, topCluster - numClusters).sortByKey().cache()
+
+    //We generate an auxiliary RDD to start each cluster at each point
+    var auxPoints = totalPoints.map(value => (value, value))
+    var a = 0
+
+    //We go through each row of the filtered cluster file
+    for (iter <- clustersFiltered.collect()) {
+
+      //We save the elements of each row in auxiliary variables to be able to filter later
+      val point1 = iter._2._1
+      val point2 = iter._2._2
+      val cluster = iter._1.toInt
+
+      //We go through the auxiliary RDD and check if in this iteration it is necessary to change the cluster to which each point belongs
+      auxPoints = auxPoints.map { value =>
+        var auxValue = value
+        if (value._2 == point1 || value._2 == point2) {
+          auxValue = (value._1, cluster)
+        }
+        auxValue
+      }
+
+      a = a + 1
+
+      //Every two hundred iterations we make a checkpoint so that the memory does not overflow
+      if (a % 200 == 0) {
+        auxPoints.checkpoint()
+        auxPoints.count()
+      }
+    }
+
     //Join the coordinates RDD with the result of the model and calculate the centroid from each cluster if the size of the cluster is more or equal than the minimum number of points chosen
-    val joinRDDs = coordinates.join(resultPoints).map(value => (value._2._2,value._2._1)).groupByKey().filter(_._2.size >= kMin)
-    val rest  = joinRDDs.mapValues(calculateMean(_)).map(_._2).collect()
+    val joinRDDs = coordinates.join(auxPoints).map(value => (value._2._2,value._2._1)).groupByKey().filter(_._2.size >= kMin)
+
+    var rest  = new Array[Vector](numStaticClusters)
+
+    //If the number of centroids that meet the condition of outliers is equal to or greater than the number of initial clusters, they are calculated
+    if(joinRDDs.count() >= numStaticClusters){
+      rest = joinRDDs.mapValues(calculateMean(_)).map(_._2).take(numStaticClusters)
+    }
+    //If not, the centroids of the following number of clusters are calculated
+    else if (numClusters < numPoints){
+      rest = inicializeCenters(coordinates, kMin, numPoints, numClusters + 1, totalPoints, numStaticClusters)
+    }
 
     //Show the duration to create the centroids
     val duration = (System.nanoTime - start) / 1e9d

@@ -173,6 +173,11 @@ class Linkage(
         matrix.checkpoint()
       }
 
+      //Every 50 iterations a checkpoint of the RDD of points and cluster is ​​done to improve the performance of the algorithm
+      if (a % 50 == 0){
+        totalPoints.checkpoint()
+      }
+
       val durationIter = (System.nanoTime - startIter) / 1e9d
       println(s"Time for $a clustering iteration: $durationIter")
 

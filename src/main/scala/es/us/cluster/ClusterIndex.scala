@@ -247,6 +247,7 @@ object ClusterIndex extends Logging {
     var modelResult = scala.collection.mutable.Map[Int, (Double, Double, Double, Double, Long, Long, Long, Long)]()
 
     //Set up the checkpoint directory
+//    sc.setCheckpointDir("hdfs://10.141.0.224:9000/jdmartin/checkpointsSpark")
     sc.setCheckpointDir("B:\\checkpoints")
 
     //Initialize the number of clusters with the minimum number of clusters
@@ -260,6 +261,14 @@ object ClusterIndex extends Logging {
 
     //Run the Linkage algorithm and create the clusters variable
     var clusters = linkage.runAlgorithm(distances, numPoints)
+
+    //    val clustering = sc.textFile("C:\\Users\\Jose David\\IdeaProjects\\linkage\\Linkage-EMPLEO-FULL(AVG)\\part-00000")
+    //      .map(s => s.split(',').map(_.toInt))
+    //      .map{
+      //    case x => (x(0).toLong, (x(1), x(2)))
+        //  }
+    //    var clusters = new LinkageModel(clustering,sc.emptyRDD[Vector].collect())
+    //    var clusters = linkage.runAlgorithmWithCentroids(distances, numPoints, coordinates)
 
     //Save the result model for the linkage algorithm
     clusters.saveSchema("")
@@ -275,8 +284,7 @@ object ClusterIndex extends Logging {
       val numClusters = k
 
       //In function of the number of clusters the centroids will chance
-      val resultPoints = clusters.createClusters(numPoints, numClusters, totalPoints)
-      val centroids = clusters.inicializeCenters(coordinates, clusterFilterNumber, resultPoints)
+      val centroids = clusters.inicializeCenters(coordinates, clusterFilterNumber, numPoints, numClusters, totalPoints, numClusters)
       clusters.setClusterCenters(centroids)
 
       //Global Center
