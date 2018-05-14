@@ -35,13 +35,13 @@ object MainTestLinkage {
 //    var fileName = "B:\\Datasets\\C3-D20-I1000"
 //    var fileName = "B:\\Datasets\\DataBase500pC7"
 //    var fileName = "C5-D20-I1000.csv"
-//    var fileName = "B:\\Datasets\\irisData.txt"
-    var fileName = "B:\\Datasets\\iris_30.txt"
+    var fileName = "B:\\Datasets\\irisData.txt"
+//    var fileName = "B:\\Datasets\\iris_30.txt"
 //    var fileName = "B:\\Datasets\\distanceTest"
 //    var fileName = "B:\\Datasets\\glassData.txt"
 //    var fileName = "B:\\Datasets\\Distances_full_dataset"
 //    var fileName = "B:\\Datasets\\DataBase500pC7"
-//    var fileName = "B:\\Datasets\\UCI DATASETS\\wholesale_data.csv"
+//    var fileName = "B:\\Datasets\\UCI DATASETS\\movement_libras.data.txt"
 
     var fileDestination = ""
 
@@ -50,15 +50,15 @@ object MainTestLinkage {
 
     /* Set up the number of points to the data, the minimum number of points per centroid
     and the strategy distance to run linkage algorithm */
-    var numPoints = 440
-    var clusterFilterNumber = Math.round(0.05*numPoints).toInt
+    var numPoints = 150
+    var clusterFilterNumber = Math.round(0.16*numPoints).toInt
 //    var clusterFilterNumber = 1
     var strategyDistance = "avg"
 
     /* Set up the type of the data, its id column, its class column ("_cX" format, since 0 until length - 1)
     and the method to calculate the distance between points */
     var typDataSet = 1
-    var classIndex = "_c0"
+    var classIndex = "_c4"
     var idIndex = "_c0"
     var distanceMethod = "Euclidean"
 
@@ -88,20 +88,6 @@ object MainTestLinkage {
       .option("inferSchema", "true")
       .option("delimiter", ",")
       .csv(origen)
-    dataDF.show(20)
-    //Casting
-//    val dataDFAux = dataDF.select(
-//      dataDF("_c0").cast(DoubleType),
-//      dataDF("_c1").cast(DoubleType),
-//      dataDF("_c2").cast(DoubleType),
-//      dataDF("_c3").cast(DoubleType),
-//      dataDF("_c4").cast(DoubleType),
-//      dataDF("_c5").cast(DoubleType),
-//      dataDF("_c6").cast(DoubleType),
-//      dataDF("_c7").cast(DoubleType)
-//      dataDF("_c8").cast(DoubleType),
-//      dataDF("_c9").cast(DoubleType)
-//    )
 
     //Filtering DataFrame
     val dataDFFiltered = typDataSet match {

@@ -268,7 +268,6 @@ object ClusterIndex extends Logging {
       //    case x => (x(0).toLong, (x(1), x(2)))
         //  }
     //    var clusters = new LinkageModel(clustering,sc.emptyRDD[Vector].collect())
-    //    var clusters = linkage.runAlgorithmWithCentroids(distances, numPoints, coordinates)
 
     //Save the result model for the linkage algorithm
     clusters.saveSchema("")

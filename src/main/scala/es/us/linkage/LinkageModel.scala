@@ -1,5 +1,6 @@
 package es.us.linkage
 
+import breeze.linalg.max
 import es.us.cluster.Utils
 import org.apache.spark.internal.Logging
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
@@ -347,19 +348,22 @@ class LinkageModel(_clusters: RDD[(Long, (Int, Int))], var _clusterCenters: Arra
         auxPoints.count()
       }
     }
-
+    println("KMIN: " + kMin)
     //Join the coordinates RDD with the result of the model and calculate the centroid from each cluster if the size of the cluster is more or equal than the minimum number of points chosen
-    val joinRDDs = coordinates.join(auxPoints).map(value => (value._2._2,value._2._1)).groupByKey().filter(_._2.size >= kMin)
+    val joinRDDs = coordinates.join(auxPoints).map(value => (value._2._2,value._2._1)).groupByKey()
+    val joinRDDsFiltered = joinRDDs.filter(_._2.size >= kMin)
 
     var rest  = new Array[Vector](numStaticClusters)
 
     //If the number of centroids that meet the condition of outliers is equal to or greater than the number of initial clusters, they are calculated
-    if(joinRDDs.count() >= numStaticClusters){
-      rest = joinRDDs.mapValues(calculateMean(_)).map(_._2).take(numStaticClusters)
+    if(joinRDDsFiltered.count() >= numStaticClusters){
+      rest = joinRDDsFiltered.mapValues(calculateMean(_)).map(_._2).take(numStaticClusters)
     }
     //If not, the centroids of the following number of clusters are calculated
-    else if (numClusters < numPoints){
-      rest = inicializeCenters(coordinates, kMin, numPoints, numClusters + 1, totalPoints, numStaticClusters)
+    else if (numClusters < numPoints - 5){
+      rest = inicializeCenters(coordinates, Math.round((kMin.toFloat/numPoints)*joinRDDs.map(_._2.size).max()), numPoints, numClusters + 1, totalPoints, numStaticClusters)
+    }else {
+      rest = inicializeCenters(coordinates, kMin, numPoints, 2, totalPoints, 2)
     }
 
     //Show the duration to create the centroids
